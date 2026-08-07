@@ -1,0 +1,112 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getUserRole() {
+      return getUserData().role;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated() && getUserRole() == 'super_admin';
+    }
+
+    function isEmployee() {
+      return isAuthenticated() && getUserRole() == 'employee';
+    }
+
+    function isStaff() {
+      return isAuthenticated() && (getUserRole() == 'super_admin' || getUserRole() == 'employee');
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users Collection
+    match /users/{uid} {
+      allow read: if isAuthenticated() && (isOwner(uid) || isStaff());
+      allow create, update: if isAuthenticated() && isStaff();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Customers Collection
+    match /customers/{customerId} {
+      allow read: if isAuthenticated() && (isOwner(customerId) || isStaff());
+      allow create, update: if isAuthenticated() && isStaff();
+      allow delete: if isSuperAdmin();
+
+      // Nested KYC documents
+      match /documents/{docId} {
+        allow read: if isAuthenticated() && (isOwner(customerId) || isStaff());
+        allow create, update: if isAuthenticated() && isStaff();
+        allow delete: if isSuperAdmin();
+      }
+    }
+
+    // Loans Collection
+    match /loans/{loanId} {
+      allow read: if isAuthenticated() && (resource.data.customerId == request.auth.uid || isStaff());
+      
+      // Enforce LTV cap check at Firestore layer as a second line of defense
+      allow create: if isAuthenticated() && isStaff() 
+        && double(request.resource.data.loanAmount) <= double(request.resource.data.estimatedValue) * (double(request.resource.data.ltvPercent) / 100.0);
+      
+      allow update: if isAuthenticated() && isStaff();
+      allow delete: if isSuperAdmin();
+
+      // Loan Images sub-collection
+      match /images/{imageId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/loans/$(loanId)).data.customerId == request.auth.uid || isStaff());
+        allow create, update: if isAuthenticated() && isStaff();
+        allow delete: if isSuperAdmin();
+      }
+
+      // Payments sub-collection
+      match /payments/{paymentId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/loans/$(loanId)).data.customerId == request.auth.uid || isStaff());
+        allow create: if isAuthenticated() && isStaff();
+        allow update, delete: if isSuperAdmin();
+      }
+
+      // Forfeiture details
+      match /forfeiture/{recordId} {
+        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/loans/$(loanId)).data.customerId == request.auth.uid || isStaff());
+        allow create, update: if isAuthenticated() && isStaff();
+        allow delete: if isSuperAdmin();
+      }
+    }
+
+    // Gold Rate History
+    match /gold_rate_history/{rateId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isSuperAdmin();
+      allow update, delete: if false; // append-only history
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated()
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    // Tamper-proof Audit Logs Collection
+    match /audit_logs/{logId} {
+      allow read: if isAuthenticated() && isSuperAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Absolutely no updates or deletes permitted
+    }
+  }
+}

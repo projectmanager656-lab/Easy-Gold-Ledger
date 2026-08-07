@@ -1,0 +1,26 @@
+{
+  "name": "Easy Gold Ledger",
+  "short_name": "Gold Ledger",
+  "description": "Gold loan management platform for customers, staff, loans, payments, reports, and KYC.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0e17",
+  "theme_color": "#d4af37",
+  "categories": ["finance", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/image.png",
+      "sizes": "800x800",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "800x800",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
