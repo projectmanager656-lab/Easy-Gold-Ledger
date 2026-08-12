@@ -137,39 +137,6 @@ easy-gold-ledger/
 ├── vite.config.js
 └── README.md
 ```
-
----
-
-### auditLogs
-
-```json
-{
-  "action": "RECORD_PAYMENT",
-  "performedBy": "admin",
-  "entityType": "LOAN",
-  "timestamp": "2026-08-07T10:30:00Z"
-}
-```
-
----
-
-## Environment Variables
-
-Create a `.env` file in the project root.
-
-```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-
-# Gold Price API
-VITE_GOLD_API_URL=https://your-gold-api.com
-VITE_GOLD_API_KEY=your_gold_api_key
-```
-
 ---
 
 ## Installation
